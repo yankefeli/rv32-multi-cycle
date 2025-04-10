@@ -38,12 +38,9 @@ The data and instruction memories of the processor should be initialized by DMem
 
 All the addresses should be based on `0x8000_0000` you can use offset to get for example `0x8000` space after `0x8000_0000`. In other words, you address space for both IMEM and DMEM is from `0x8000_0000` to `0x8000_FFFF` (if you require more space for your implementation you can increase the ending address).
 
-To trace the processor state, RF write and DMEM write operations should be logged to LogFile. Therefore, following two functions should be used in RF and DMEM modules to track the written values. You can change the signal names (e.g., rf_idx_dec) with respect to your signal names.
+To trace the processor state, you can use the print parts in given testbench.
 
-```
-$fwrite(LogFile, "x%0d 0x%16h", rf_idx_dec, rf_data_hex); // log the register file writes
-$fwrite(LogFile, "mem 0x%h 0x%h", dmem_idx_dec, dmem_data_hex); // log the data memory writes
-```
+
 Some resources:
 - [RISC-V: An Overview of the Instruction Set Architecture](https://web.cecs.pdx.edu/~harry/riscv/RISCV-Summary.pdf)
 - [RISC-V Specification](https://github.com/riscv/riscv-isa-manual/releases/download/riscv-isa-release-bb8b912-2025-03-21/riscv-privileged.pdf)
