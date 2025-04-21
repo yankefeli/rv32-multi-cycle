@@ -52,7 +52,7 @@ Tasks:
 2. Clean all lint problems.
 3. Run the example in the test folder.
 4. Find other test and check (there will be other test cases to check).
-5. Create a PC table for each cycle. state flush and stall states. Example is below. Assume `0x80000010` is a mispredicted branch jumping to `0x80001000`.
+5. Create a PC table for each cycle. state flush and stall states. Example is below. Assume `0x80000010` is a mispredicted branch jumping to `0x80001000`. Name you txt as `pipe.log` and the directory is the directory of `model.log`.
 
 |    | F| D| E|M |WB|
 |--  |--|--|--|--|--|
