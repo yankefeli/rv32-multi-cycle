@@ -81,14 +81,24 @@ always_comb begin
  end
  
  
- always_comb begin
+logic [1:0] update_counter;
+
+always_ff @(negedge rstn_i or posedge clk_i) begin
+    if (!rstn_i)
+        update_counter <= 2'd0;
+    else if (update_counter < 2'd3)
+        update_counter <= update_counter + 2'd1;
+end
+
+always_comb begin
     update_model = 1;
 
-    if (Instr_o == 32'h0) begin                             // Instr_o = InstrW (instruction at writeback stage)
-        update_model = 0;
+    if (update_counter >= 2'd3) begin
+        if (Instr_o == 32'h0)
+            update_model = 0;
     end
- 
- end
+end
+
 
 
 assign StallF = StallF1;
