@@ -28,10 +28,13 @@ module riscv_multicycle
 (
     input  logic             clk_i,       // system clock
     input  logic             rstn_i,      // system reset
+    
+    
     input  logic  [XLEN-1:0] addr_i,      // memory adddres input for reading
     output logic  [XLEN-1:0] data_o,      // memory data output for reading
+    output logic             update_model,
     output logic             update_o,    // retire signal
-    output logic  [XLEN-1:0] instr_o,     // retired instruction
+    output logic  [XLEN-1:0] Instr_o,     // retired instruction
     output logic  [     4:0] reg_addr_o,  // retired register address
     output logic  [XLEN-1:0] reg_data_o,  // retired register data
     output logic  [XLEN-1:0] mem_addr_o,  // retired memory address
@@ -61,13 +64,28 @@ logic [31:0] Instr1;
 logic [19:15] rs1d1, rs1_e1;
 logic [24:20] rs2d1, rs2_e1;
 logic [11:7]  rd_e1, rd_m1, rd_w1;
+logic [31:0]  Instr_raw;
 
+logic [4:0] reg_addr_o1;
+
+assign reg_addr_o = (Instr_o[6:0] == 7'b1100011) ? 5'h0 : reg_addr_o1; // send zero for branch, Instr_o = InstrW
+                                                              // reg_addr_o1 = a3 (from regfile)
 
 always_comb begin
     update_o = 1;
 
-    if (instr_o == 32'h0) begin
+    if (Instr_raw == 32'h0) begin
         update_o = 0;
+    end
+ 
+ end
+ 
+ 
+ always_comb begin
+    update_model = 1;
+
+    if (Instr_o == 32'h0) begin                             // Instr_o = InstrW (instruction at writeback stage)
+        update_model = 0;
     end
  
  end
@@ -96,7 +114,7 @@ Datapath
     .ALUControl(ALUControl1),
     .ImmSrc(ImmSrc1),
     .ResultSrc(ResultSrc1),
-    .Instr(Instr1),
+    .Instr(Instr1),            // Control Unit Output
     
     .ForwardAE(ForwardAE1),
     .ForwardBE(ForwardBE1),
@@ -123,8 +141,10 @@ Datapath
     .addr_i(addr_i),                 //input for data mem port (additional)
     
     .data_o(data_o),        
-    .Instr_o(instr_o),   
-    .reg_addr_o(reg_addr_o),
+    .Instr_o(Instr_o),   
+    
+    .reg_addr_o(reg_addr_o1),        //conditional output for tb
+    
     .reg_data_o(reg_data_o),
     .mem_addr_o(mem_addr_o),         //testbecnh outputs
     .mem_data_o(mem_data_o),
@@ -135,7 +155,9 @@ Datapath
     .pc_d(pc_d),  
     .pc_e(pc_e),                     // table components for pipe.log
     .pc_m(pc_m),  
-    .pc_wb(pc_wb)        
+    .pc_wb(pc_wb),
+    
+    .Instr_raw(Instr_raw)            // output from imem        
  ); 
  
  

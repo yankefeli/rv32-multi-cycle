@@ -37,7 +37,7 @@ module Pipeline_Datapath
     output logic [11:7]  rd_e, rd_m, rd_w, 
     output logic         pcsrce, resultsrce_0, regwrite_m,regwrite_w,
     
-    output logic [31:0]  Instr_o,
+    output logic [31:0]  Instr_o,  //testbench output
     output logic [31:0]  data_o,
     output logic [4:0]   reg_addr_o,
     output logic [31:0]  reg_data_o,          //testbench outputs
@@ -51,7 +51,9 @@ module Pipeline_Datapath
      output logic  [31:0] pc_d,        // retired program counter (decode)     
      output logic  [31:0] pc_e,        // retired program counter (execute)    
      output logic  [31:0] pc_m,        // retired program counter (memory)     
-     output logic  [31:0] pc_wb        // retired program counter  (write back)
+     output logic  [31:0] pc_wb,       // retired program counter  (write back)
+     
+     output logic  [31:0] Instr_raw    // Output From Instruction Memory  
 
 );
               
@@ -65,8 +67,7 @@ begin
     branche <= 1'b0;           //initial condition
 end             
 */      
-
-              
+      
               
 logic [31:0]instr,RD1,RD2, ImmExtD, PCTargetE, four, PCNext, ALUResult, ReadData, Target;             
 logic [31:0] pcnext, result,target;
@@ -116,6 +117,10 @@ ALU d4 (.A(SrcAE), .B(SrcBE), .F(ALUResult), .Zero(ZeroE),.op(ALUControlE));
  
 Data_Memory d5 (.A(ALUResultM), .WD(WriteDataM), .CLK(clk), .WE(MemWriteM), .RD(ReadData), .funct3(Funct3M), .addr_i(addr_i), .data_o(data_o)); 
 
+
+assign Instr_raw = instr; // output from imem        
+
+
 //---------------------------------------------
 always_ff @(posedge clk or negedge rstn_i) begin
     
@@ -150,6 +155,10 @@ logic [19:15] Rs1E;
 logic [24:20] Rs2E;
 logic [14:12] funct3e;
 logic [14:12] Funct3E;
+logic [31:0] instre;
+logic [31:0] InstrE;
+
+assign InstrE = instre;
 
 assign RegWriteE = regwritee;
 assign MemWriteE = memwritee;
@@ -196,6 +205,7 @@ always_ff @(posedge clk or negedge rstn_i) begin
         rd2e<=32'b0;
         targetsrce<=2'b0;
         funct3e<=3'b0;
+        instre<=32'b0;
     end
     
     else begin
@@ -216,6 +226,7 @@ always_ff @(posedge clk or negedge rstn_i) begin
         rd2e<=RD2;
         targetsrce <= TargetSrc;
         funct3e<=InstrD[14:12];
+        instre <= InstrD;
     end
     
 end   
@@ -230,6 +241,8 @@ logic [14:12] funct3m;
 logic [31:0] PCTargetM;
 logic [31:0] pcm;
 logic [31:0] PCM;
+logic [31:0] instrm;
+logic [31:0] InstrM;
  
 assign RegWriteM = regwritem;
 assign ResultSrcM = resultsrcm;
@@ -241,6 +254,7 @@ assign PCPlus4M = pcplus4m;
 assign Funct3M = funct3m;
 assign PCTargetM = pctargetm;
 assign PCM = pcm;
+assign InstrM = instrm;
 
 
 //--------------------------------------------------------------- 
@@ -260,6 +274,7 @@ always_ff @(posedge clk or negedge rstn_i) begin
         funct3m <= Funct3E;
         pctargetm <= PCTargetE;
         pcm <= PCE;
+        instrm <= InstrE;
     end    
 end
  
@@ -271,8 +286,19 @@ end
  logic [11:7] rdw;
  logic [1:0] ResultSrcW;
  logic [31:0] ReadDataW,PCTargetW;
+ 
  logic [31:0] pcw;
  logic [31:0] PCW;
+ 
+ logic [31:0] instrw;
+ logic [31:0] InstrW;
+ 
+ logic [31:0] writedataw;
+ logic [31:0] WriteDataW;
+ 
+ logic memwritew;
+ logic MemWriteW;
+ 
  
  
  
@@ -282,8 +308,13 @@ end
  assign PCPlus4W = pcplus4w;
  assign PCTargetW = pctargetw;
  assign RdW = rdw;
- assign ALUResultW = aluresultw;
+ 
+ assign ALUResultW = aluresultw;  // needed for tb
+ assign WriteDataW = writedataw;  // needed for tb
+ assign MemWriteW  = memwritew;   // meeded for tb
  assign PCW = pcw;
+ assign InstrW = instrw;
+ 
  
  //-------------------------------------------------------------
  always_ff @(posedge clk or negedge rstn_i) begin
@@ -298,8 +329,12 @@ end
         pcplus4w <= PCPlus4M;          //pipe4
         pctargetw <= PCTargetM;  
         rdw<= RdM;  
-        aluresultw <=ALUResultM; 
-        pcw <=  PCM;               
+        
+        aluresultw <=ALUResultM; // needed for tb
+        pcw <=  PCM;  
+        instrw <= InstrM;    
+        writedataw <= WriteDataM;    // needed for tb
+        memwritew <= MemWriteM;  
     end
     
  end
@@ -332,7 +367,8 @@ always_comb begin
     1'b1: flag =~ZeroE;
     endcase
     */
-    Instr = InstrD;      
+    Instr = InstrD;   //output for control unit
+    
     rs1d = InstrD[19:15];
     rs2d = InstrD[24:20];
     rs1_e = Rs1E;
@@ -396,10 +432,13 @@ end
 //-----------------------------
 assign reg_addr_o = RdW;
 assign reg_data_o = ResultW;
-assign mem_addr_o = ALUResultM;
-assign mem_data_o = WriteDataM;
-assign mem_wrt_o  = MemWriteM;
-assign Instr_o    = instr;
+
+assign mem_addr_o = ALUResultW;
+assign mem_data_o = WriteDataW;   //32 bit
+assign Instr_o    = InstrW;
+
+assign mem_wrt_o  = MemWriteW;    //1  bit
+
 
 
 
@@ -407,9 +446,9 @@ assign pc_f  = PCF ;
 assign pc_d  = PCD ;
 assign pc_e  = PCE ;
 assign pc_m  = PCM ;
-assign pc_wb = PCW;
+assign pc_wb = PCW ;
 
-//-------------------------------     
+//-----------------------------     
 
  
 endmodule
